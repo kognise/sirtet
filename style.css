@@ -2,8 +2,8 @@ body {
 	background: #000000;
 	margin: 0;
 	color: #ffffff;
-	font-family: 'Comic Neue', sans-serif;
-	animation: hue-shift 6s linear infinite;
+	font-family: 'Comic Sans MS', sans-serif;
+	/* animation: hue-shift 6s linear infinite; */
 	user-select: none;
 	overflow-y: hidden;
 }
@@ -14,19 +14,6 @@ body, main {
 	align-items: center;
 	justify-content: center;
 	height: 100vh;
-}
-
-canvas {
-	transform: scaleY(-1);
-}
-
-canvas:not(.p5Canvas) {
-	position: static !important;
-}
-
-#big-logo {
-	width: 100px;
-	height: 100px;
 }
 
 #start {

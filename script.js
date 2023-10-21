@@ -69,27 +69,27 @@ const vFramesPerLevel = [
 	48, 43, 38, 33, 28, 23, 18, 13, 8, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
 ]
 
-const allKeys1 = [ 'w', 'a', 's', 'd', 'c' ]
-
-const b2p = 24
-const boardWidthB = 14
-const boardHeightB = 26
+const b2p = 30
+const boardWidthB = 10
+const boardHeightB = 20
 const previewMarginB = 2
 const previewMarginVB = 0.7
 const previewSizeB = 4
 
-const lateralTime = 70
+const lateralTime = 120
 const maxSoftDropTime = 24
 const lockTime = 500
-const shakeTime = 300
-const flickerTimeBase = 500
+const shakeTime = 80
+const flickerTimeBase = 100
 
-const lockSound = new Audio('sounds/bwong.mp3')
-const movementSound = new Audio('sounds/wow.mp3')
+const lockSound = new Audio('sounds/wow.mp3')
+const movementSound = new Audio('sounds/tick.mp3')
 const rotateSound = new Audio('sounds/squeak.mp3')
 const collapseSound = new Audio('sounds/whoosh.mp3')
 const holdSound = new Audio('sounds/beep.mp3')
-const levelSound = new Audio('sounds/toot.mp3')
+const levelSound = new Audio('sounds/bwong.mp3')
+
+let latS = {}
 
 lockSound.volume = 0.5
 
@@ -169,19 +169,12 @@ function rotateBlocks(blocks) {
 // Game data
 const blocks = []
 
-let queue1 = makeQueue()
-let current1 = { row: -1, ...queue1.shift() }
-let startLock1
-let hold1
-let swapped1 = false
-current1.col = Math.floor(Math.random() * (boardWidthB - current1.blocks[0].length))
-
-let queue2 = makeQueue()
-let current2 = { row: -1, ...queue2.shift() }
-let startLock2
-let hold2
-let swapped2 = false
-current2.col = Math.floor(Math.random() * (boardWidthB - current2.blocks[0].length))
+let queue = makeQueue()
+let current = { row: -1, ...queue.shift() }
+let startLock
+let hold
+let swapped = false
+current.col = Math.floor(Math.random() * (boardWidthB - current.blocks[0].length))
 
 // Initialize things
 for (let row = 0; row < boardHeightB; row++) {
@@ -190,13 +183,11 @@ for (let row = 0; row < boardHeightB; row++) {
 
 // All the main logic
 function setup() {
-	createCanvas((boardWidthB + (previewMarginB * 2) + (previewSizeB * 2)) * b2p, boardHeightB * b2p)
+	createCanvas((previewSizeB + previewMarginB + boardWidthB + previewMarginB + previewSizeB) * b2p, boardHeightB * b2p)
 }
 
-const keys1 = []
-const keys2 = []
-let lastKeys1 = keys1
-let lastKeys2 = keys2
+const keys = []
+let lastKeys = keys
 let lastDateNow = 0
 
 let shakeCount = 0
@@ -206,21 +197,6 @@ let score = 0
 let level = 0
 let collapsedRowsSinceLevel = 0
 let startTime = -1
-
-function swapSidesIfNeeded() {
-	if (current1.col > current2.col) {
-		const [ queue2o, current2o, startLock2o ] = [ queue2, current2, startLock2 ]
-
-		queue2 = queue1
-		current2 = current1
-		startLock2 = startLock1
-
-		queue1 = queue2o
-		current1 = current2o
-		startLock1 = startLock2o
-	}
-}
-swapSidesIfNeeded()
 
 function testDrop(current) {
 	const ghost = { ...current }
@@ -252,11 +228,9 @@ function drawBlock(row, col, color) {
 
 function cleanup() {
 	lastDateNow = Date.now()
-	lastKeys1 = [ ...keys1 ]
-	lastKeys2 = [ ...keys2 ]
+	lastKeys = [ ...keys ]
 
-	if (queue1.length < pieces.length) queue1 = queue1.concat(makeQueue())
-	if (queue2.length < pieces.length) queue2 = queue2.concat(makeQueue())
+	if (queue.length < pieces.length) queue = queue.concat(makeQueue())
 }
 
 function msToTime(ms) {
@@ -273,7 +247,7 @@ function draw() {
 	document.getElementById('timer').innerText = startTime === -1 ? '0:00' : msToTime(Date.now() - startTime)
 	
 	if (!gameStarted) {
-		if (keys2.includes(' ')) {
+		if (keys.includes(' ')) {
 			score = 0
 			level = 0
 			collapsedRowsSinceLevel = 0
@@ -291,47 +265,28 @@ function draw() {
 	document.getElementById('clear').innerText = (6 * (level + 1) - collapsedRowsSinceLevel).toLocaleString()
 
 	// Render previews and stuff
-	for (let i = 0; i < 4; i++) {
+	for (let i = 0; i < 3; i++) {
 		const bigRowOffset = i * (previewSizeB + previewMarginVB)
 
 		stroke('#222222')
 		strokeWeight(2)
 		noFill()
 		rect(
-			1,
-			(boardHeightB - previewSizeB - bigRowOffset) * b2p - 1,
-			previewSizeB * b2p - 2,
-			previewSizeB * b2p
-		)
-		rect(
-			(previewSizeB + previewMarginB * 2 + boardWidthB) * b2p + 1,
+			(previewMarginB + previewSizeB + previewMarginB + boardWidthB) * b2p + 1,
 			(boardHeightB - previewSizeB - bigRowOffset) * b2p - 1,
 			previewSizeB * b2p - 2,
 			previewSizeB * b2p
 		)
 
-		const rowOffset1 = (queue1[i].blocks.length <= 3 ? 1 : 0) + bigRowOffset
-		const colOffset1 = (queue1[i].blocks.length === 2 ? 1 : 0)
-		for (let row = 0; row < queue1[i].blocks.length; row++) { 
-			for (let col = 0; col < queue1[i].blocks[0].length; col++) {
-				if (!queue1[i].blocks[row][col]) continue
+		const rowOffset = (queue[i].blocks.length <= 3 ? 1 : 0) + bigRowOffset
+		const colOffset = (queue[i].blocks.length === 2 ? 1 : 0) + (previewMarginB + previewSizeB + previewMarginB + boardWidthB)
+		for (let row = 0; row < queue[i].blocks.length; row++) { 
+			for (let col = 0; col < queue[i].blocks[0].length; col++) {
+				if (!queue[i].blocks[row][col]) continue
 				drawBlock(
-					boardHeightB - 1 - row - rowOffset1,
-					col + colOffset1,
-					queue1[i].color
-				)
-			}
-		}
-
-		const rowOffset2 = (queue2[i].blocks.length <= 3 ? 1 : 0) + bigRowOffset
-		const colOffset2 = (queue2[i].blocks.length === 2 ? 1 : 0) + (previewSizeB + previewMarginB * 2 + boardWidthB)
-		for (let row = 0; row < queue2[i].blocks.length; row++) { 
-			for (let col = 0; col < queue2[i].blocks[0].length; col++) {
-				if (!queue2[i].blocks[row][col]) continue
-				drawBlock(
-					boardHeightB - 1 - row - rowOffset2,
-					col + colOffset2,
-					queue2[i].color
+					boardHeightB - 1 - row - rowOffset,
+					col + colOffset,
+					queue[i].color
 				)
 			}
 		}
@@ -342,42 +297,22 @@ function draw() {
 	strokeWeight(2)
 	noFill()
 	rect(
-		1,
-		1,
-		previewSizeB * b2p - 2,
-		previewSizeB * b2p
-	)
-	rect(
-		(previewSizeB + previewMarginB * 2 + boardWidthB) * b2p + 1,
+		(previewMarginB + previewSizeB + previewMarginB + boardWidthB) * b2p + 1,
 		1,
 		previewSizeB * b2p - 2,
 		previewSizeB * b2p
 	)
 
-	if (hold1) {
-		const rowOffset1 = hold1.blocks.length <= 3 ? 1 : 0
-		const colOffset1 = hold1.blocks.length === 2 ? 1 : 0
-		for (let row = 0; row < hold1.blocks.length; row++) { 
-			for (let col = 0; col < hold1.blocks[0].length; col++) {
-				if (!hold1.blocks[row][col]) continue
-				drawBlock(
-					row + rowOffset1,
-					col + colOffset1,
-					hold1.color
-				)
-			}
-		}
-	}
-	if (hold2) {
-		const rowOffset2 = hold2.blocks.length <= 3 ? 1 : 0
-		const colOffset2 = (hold2.blocks.length === 2 ? 1 : 0) + (previewSizeB + previewMarginB * 2 + boardWidthB)
-		for (let row = 0; row < hold2.blocks.length; row++) { 
-			for (let col = 0; col < hold2.blocks[0].length; col++) {
-				if (!hold2.blocks[row][col]) continue
+	if (hold) {
+		const rowOffset2 = hold.blocks.length <= 3 ? 1 : 0
+		const colOffset2 = (hold.blocks.length === 2 ? 1 : 0) + (previewMarginB + previewSizeB + previewMarginB + boardWidthB)
+		for (let row = 0; row < hold.blocks.length; row++) { 
+			for (let col = 0; col < hold.blocks[0].length; col++) {
+				if (!hold.blocks[row][col]) continue
 				drawBlock(
 					row + rowOffset2,
 					col + colOffset2,
-					hold2.color
+					hold.color
 				)
 			}
 		}
@@ -390,198 +325,114 @@ function draw() {
 	document.body.classList.toggle('shake', shakeCount > 0)
 	document.body.classList.toggle('flicker', flickerCount > 0)
 	
-	const isInterval = (ms) => Date.now() % ms < lastDateNow % ms
+	const isInterval = (ms, s = 0) => (Date.now() - s) % ms < (lastDateNow - s) % ms
 	const isSince = (time, ms) => Date.now() >= (time + ms)
 
 	try {
-		const key1 = keys1[0]
-		const key2 = keys2[0]
-		if (key1) {
-			if ([ 'a', 'd' ].includes(key1) && isInterval(lateralTime)) {
-				if (key1 === 'a') {
-					if (!collidesOrBreaks(current1.blocks, current1.row, current1.col - 1, blocks)) {
-						current1.col--
+		const pressedKey = keys[0]
+		if (pressedKey) {
+			if ([ 'ArrowLeft', 'ArrowRight' ].includes(pressedKey) && (isInterval(lateralTime, latS[pressedKey] ?? 0) || !lastKeys.includes(pressedKey))) {
+				if (!lastKeys.includes(pressedKey)) {
+					latS[pressedKey] = Date.now()
+				}
+				if (pressedKey === 'ArrowLeft') {
+					if (!collidesOrBreaks(current.blocks, current.row, current.col - 1, blocks)) {
+						current.col--
 						movementSound.currentTime = 0
 						movementSound.play()
-						if (startLock1) startLock1 = Date.now()
+						if (startLock) startLock = Date.now()
 					}
-				} else if (key1 === 'd') {
-					if (!collidesOrBreaks(current1.blocks, current1.row, current1.col + 1, blocks)) {
-						current1.col++
+				} else if (pressedKey === 'ArrowRight') {
+					if (!collidesOrBreaks(current.blocks, current.row, current.col + 1, blocks)) {
+						current.col++
 						movementSound.currentTime = 0
 						movementSound.play()
-						if (startLock1) startLock1 = Date.now()
+						if (startLock) startLock = Date.now()
 					}
 				}
 			}
 
-			if (key1 === 's' && !lastKeys1.includes(key1) && !collidesOrBreaks(
-				rotateBlocks(current1.blocks), current1.row, current1.col, blocks
+			if (pressedKey === 'ArrowUp' && !lastKeys.includes(pressedKey) && !collidesOrBreaks(
+				rotateBlocks(current.blocks), current.row, current.col, blocks
 			)) {
-				current1.blocks = rotateBlocks(current1.blocks)
+				current.blocks = rotateBlocks(current.blocks)
 				rotateSound.currentTime = 0
 				rotateSound.play()
 			}
-			if (!startLock1 && key1 === 'w' && isInterval(softDropTime) && !isInterval(autoDropTime)) {
-				current1.row++
+			if (!startLock && pressedKey === 'ArrowDown' && isInterval(softDropTime) && !isInterval(autoDropTime)) {
+				current.row++
 			}
-			if (!startLock1 && key1 === 'w' && isInterval(softDropTime * 2) && !isInterval(autoDropTime)) {
+			if (!startLock && pressedKey === 'ArrowDown' && isInterval(softDropTime * 2) && !isInterval(autoDropTime)) {
 				movementSound.currentTime = 0
 				movementSound.play()
 			}
 
-			if (!startLock1 && key1 === 'c' && !swapped1) {
-				current1.row = -1
-				const newHold1 = { ...current1 }
-				current1 = { ...current1, ...(hold1 || queue1.shift()) }
-				hold1 = newHold1
-				const rightDiff = boardWidthB - (current1.col + getMaxLeft(current1.blocks))
-				if (rightDiff < 0) current1.col += rightDiff
-				if (current1.col < 0) current1.col = 0
-				swapped1 = true
+			if (!startLock && pressedKey === 'c' && !swapped) {
+				current.row = -1
+				const newHold1 = { ...current }
+				current = { ...current, ...(hold || queue.shift()) }
+				hold = newHold1
+				const rightDiff = boardWidthB - (current.col + getMaxLeft(current.blocks))
+				if (rightDiff < 0) current.col += rightDiff
+				if (current.col < 0) current.col = 0
+				swapped = true
 				holdSound.currentTime = 0
 				holdSound.play()
 			}
 		}
-		if (key2) {
-			if ([ 'j', 'l' ].includes(key2) && isInterval(lateralTime)) {
-				if (key2 === 'j') {
-					if (!collidesOrBreaks(current2.blocks, current2.row, current2.col - 1, blocks)) {
-						current2.col--
-						movementSound.currentTime = 0
-						movementSound.play()
-						if (startLock2) startLock2 = Date.now()
-					}
-				} else if (key2 === 'l') {
-					if (!collidesOrBreaks(current2.blocks, current2.row, current2.col + 1, blocks)) {
-						current2.col++
-						movementSound.currentTime = 0
-						movementSound.play()
-						if (startLock2) startLock2 = Date.now()
-					}
-				}
-			}
-
-			if (key2 === 'k' && !lastKeys2.includes(key2) && !collidesOrBreaks(
-				rotateBlocks(current2.blocks), current2.row, current2.col, blocks
-			)) {
-				current2.blocks = rotateBlocks(current2.blocks)
-				rotateSound.currentTime = 0
-				rotateSound.play()
-			}
-			if (!startLock2 && key2 === 'i' && isInterval(softDropTime) && !isInterval(autoDropTime)) {
-				current2.row++
-			}
-			if (!startLock2 && key2 === 'i' && isInterval(softDropTime * 2) && !isInterval(autoDropTime)) {
-				movementSound.currentTime = 0
-				movementSound.play()
-			}
-
-			if (!startLock2 && key2 === 'n' && !swapped2) {
-				current2.row = -1
-				const newHold2 = { ...current2 }
-				current2 = { ...current2, ...(hold2 || queue2.shift()) }
-				hold2 = newHold2
-				const rightDiff = boardWidthB - (current2.col + getMaxLeft(current2.blocks))
-				if (rightDiff < 0) current2.col += rightDiff
-				if (current2.col < 0) current2.col = 0
-				swapped2 = true
-				holdSound.currentTime = 0
-				holdSound.play()
-			}
-		}
-		if (key2 === ' ' && !lastKeys2.includes(' ')) {
+		if (pressedKey === ' ' && !lastKeys.includes(' ')) {
 			console.log('locking (1 + 2)')
-			swapped1 = false
-			swapped2 = false
+			swapped = false
 
 			lockSound.currentTime = 0
 			lockSound.play()
-			startLock1 = undefined
-			startLock2 = undefined
+			startLock = undefined
 
-			current1 = testDrop(current1)
-			current2 = testDrop(current2)
+			current = testDrop(current)
 
-			for (let row = 0; row < current1.blocks.length; row++) { 
-				for (let col = 0; col < current1.blocks[0].length; col++) {
-					if (current1.blocks[row][col] !== 1) continue
-					blocks[row + current1.row][col + current1.col] = current1.color
-				}
-			}
-			for (let row = 0; row < current2.blocks.length; row++) { 
-				for (let col = 0; col < current2.blocks[0].length; col++) {
-					if (current2.blocks[row][col] !== 1) continue
-					blocks[row + current2.row][col + current2.col] = current2.color
+			for (let row = 0; row < current.blocks.length; row++) { 
+				for (let col = 0; col < current.blocks[0].length; col++) {
+					if (current.blocks[row][col] !== 1) continue
+					blocks[row + current.row][col + current.col] = current.color
 				}
 			}
 
-			current1 = { row: -1, ...queue1.shift() }
-			current1.col = Math.floor(Math.random() * (boardWidthB - current1.blocks[0].length))
-			current2 = { row: -1, ...queue2.shift() }
-			current2.col = Math.floor(Math.random() * (boardWidthB - current2.blocks[0].length))
+			current = { row: -1, ...queue.shift() }
+			current.col = Math.floor(Math.random() * (boardWidthB - current.blocks[0].length))
 			
-			swapSidesIfNeeded()
 			shakeCount++
 			setTimeout(() => shakeCount--, shakeTime)
 		}
 
 		if (isInterval(autoDropTime)) {
-			if (!startLock1) current1.row++
-			if (!startLock2) current2.row++
-			if (!startLock1 || !startLock2) {
+			if (!startLock) {
+				current.row++
 				movementSound.currentTime = 0
 				movementSound.play()
 			}
 		}
 
-		if (collidesOrBreaks(current1.blocks, current1.row + 1, current1.col, blocks)) {
-			if (!startLock1) startLock1 = Date.now()
-		} else if (startLock1) startLock1 = undefined
-		if (collidesOrBreaks(current2.blocks, current2.row + 1, current2.col, blocks)) {
-			if (!startLock2) startLock2 = Date.now()
-		} else if (startLock2) startLock2 = undefined
+		if (collidesOrBreaks(current.blocks, current.row + 1, current.col, blocks)) {
+			if (!startLock) startLock = Date.now()
+		} else if (startLock) startLock = undefined
 
-		if (startLock1 && isSince(startLock1, lockTime)) {
-			console.log('locking (1)')
-			swapped1 = false
+		if (startLock && isSince(startLock, lockTime)) {
+			console.log('locking')
+			swapped = false
 
 			lockSound.currentTime = 0
 			lockSound.play()
-			startLock1 = undefined
+			startLock = undefined
 
-			for (let row = 0; row < current1.blocks.length; row++) { 
-				for (let col = 0; col < current1.blocks[0].length; col++) {
-					if (current1.blocks[row][col] !== 1) continue
-					blocks[row + current1.row][col + current1.col] = current1.color
+			for (let row = 0; row < current.blocks.length; row++) { 
+				for (let col = 0; col < current.blocks[0].length; col++) {
+					if (current.blocks[row][col] !== 1) continue
+					blocks[row + current.row][col + current.col] = current.color
 				}
 			}
 			
-			current1 = { row: -1, ...queue1.shift() }
-			current1.col = Math.floor(Math.random() * (boardWidthB - current1.blocks[0].length))
-			swapSidesIfNeeded()
-
-			shakeCount++
-			setTimeout(() => shakeCount--, shakeTime)
-		}
-		if (startLock2 && isSince(startLock2, lockTime)) {
-			console.log('locking (2)')
-			swapped2 = false
-
-			lockSound.currentTime = 0
-			lockSound.play()
-			startLock2 = undefined
-
-			for (let row = 0; row < current2.blocks.length; row++) { 
-				for (let col = 0; col < current2.blocks[0].length; col++) {
-					if (current2.blocks[row][col] !== 1) continue
-					blocks[row + current2.row][col + current2.col] = current2.color
-				}
-			}
-			
-			current2 = { row: -1, ...queue2.shift() }
-			current2.col = Math.floor(Math.random() * (boardWidthB - current2.blocks[0].length))
-			swapSidesIfNeeded()
+			current = { row: -1, ...queue.shift() }
+			current.col = Math.floor(Math.random() * (boardWidthB - current.blocks[0].length))
 
 			shakeCount++
 			setTimeout(() => shakeCount--, shakeTime)
@@ -646,9 +497,10 @@ function draw() {
 		)
 
 		noStroke()
+		fill('#222222')
 		for (let row = 1; row < boardHeightB; row++) { 
 			for (let col = 1; col < boardWidthB; col++) {
-				circle((leftOffsetB + col) * b2p, row * b2p, 3)
+				circle((leftOffsetB + col) * b2p, row * b2p, 1.5)
 			}
 		}
 
@@ -664,36 +516,25 @@ function draw() {
 			}
 		}
 
-		for (const ghost of [ testDrop(current1), testDrop(current2) ]) {
-			for (let row = 0; row < ghost.blocks.length; row++) { 
-				for (let col = 0; col < ghost.blocks[0].length; col++) {
-					if (!ghost.blocks[row][col]) continue
-					drawBlock(
-						row + ghost.row,
-						leftOffsetB + col + ghost.col,
-						'#222222'
-					)
-				}
-			}
-		}
-
-		for (let row = 0; row < current1.blocks.length; row++) { 
-			for (let col = 0; col < current1.blocks[0].length; col++) {
-				if (!current1.blocks[row][col]) continue
+		const ghost = testDrop(current)
+		for (let row = 0; row < ghost.blocks.length; row++) { 
+			for (let col = 0; col < ghost.blocks[0].length; col++) {
+				if (!ghost.blocks[row][col]) continue
 				drawBlock(
-					row + current1.row,
-					leftOffsetB + col + current1.col,
-					current1.color
+					row + ghost.row,
+					leftOffsetB + col + ghost.col,
+					'#222222'
 				)
 			}
 		}
-		for (let row = 0; row < current2.blocks.length; row++) { 
-			for (let col = 0; col < current2.blocks[0].length; col++) {
-				if (!current2.blocks[row][col]) continue
+
+		for (let row = 0; row < current.blocks.length; row++) { 
+			for (let col = 0; col < current.blocks[0].length; col++) {
+				if (!current.blocks[row][col]) continue
 				drawBlock(
-					row + current2.row,
-					leftOffsetB + col + current2.col,
-					current2.color
+					row + current.row,
+					leftOffsetB + col + current.col,
+					current.color
 				)
 			}
 		}
@@ -705,19 +546,12 @@ function draw() {
 		document.getElementById('start').innerText = 'you lost! press space to play again'
 		document.getElementById('start').style.display = 'block'
 
-		queue1 = makeQueue()
-		current1 = { row: -1, ...queue1.shift() }
-		startLock1 = undefined
-		hold1 = undefined
-		swapped1 = false
-		current1.col = Math.floor(Math.random() * (boardWidthB - current1.blocks[0].length))
-
-		queue2 = makeQueue()
-		current2 = { row: -1, ...queue2.shift() }
-		startLock2 = undefined
-		hold2 = undefined
-		swapped2 = false
-		current2.col = Math.floor(Math.random() * (boardWidthB - current2.blocks[0].length))
+		queue = makeQueue()
+		current = { row: -1, ...queue.shift() }
+		startLock = undefined
+		hold = undefined
+		swapped = false
+		current.col = Math.floor(Math.random() * (boardWidthB - current.blocks[0].length))
 
 		for (let row = 0; row < boardHeightB; row++) {
 			blocks[row] = new Array(boardWidthB).fill(null)
@@ -728,18 +562,10 @@ function draw() {
 }
 
 function keyPressed() {
-	if (keys1.includes(key) || keys2.includes(key)) return
-	if (allKeys1.includes(key)) {
-		keys1.unshift(key)
-	} else {
-		keys2.unshift(key)
-	}
+	if (keys.includes(key)) return
+	keys.unshift(key)
 }
 
 function keyReleased() {
-	if (allKeys1.includes(key)) {
-		keys1.splice(keys1.indexOf(key), 1)
-	} else {
-		keys2.splice(keys2.indexOf(key), 1)
-	}
+	keys.splice(keys.indexOf(key), 1)
 }
