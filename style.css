@@ -1,0 +1,113 @@
+body {
+	background: #000000;
+	margin: 0;
+	color: #ffffff;
+	font-family: 'Comic Neue', sans-serif;
+	animation: hue-shift 6s linear infinite;
+	user-select: none;
+	overflow-y: hidden;
+}
+
+body, main {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100vh;
+}
+
+canvas {
+	transform: scaleY(-1);
+}
+
+canvas:not(.p5Canvas) {
+	position: static !important;
+}
+
+#big-logo {
+	width: 100px;
+	height: 100px;
+}
+
+#start {
+	margin-top: 200px;
+	font-size: 3rem;
+	color: #ff0000;
+}
+
+#controls {
+	position: fixed;
+	top: 60px;
+	left: 60px;
+	font-size: 1.2rem;
+	max-width: 300px;
+}
+
+#stats {
+	position: fixed;
+	top: 60px;
+	right: 60px;
+	text-align: right;
+	font-size: 2.4rem;
+}
+
+@keyframes shake {
+	0% {
+		transform: translate(10px, 10px) rotate(0deg);
+	}
+	10% {
+		transform: translate(-10px, -20px) rotate(-1deg);
+	}
+	20% {
+		transform: translate(-30px, 0px) rotate(1deg);
+	}
+	30% {
+		transform: translate(30px, 20px) rotate(0deg);
+	}
+	40% {
+		transform: translate(10px, -10px) rotate(1deg);
+	}
+	50% {
+		transform: translate(-10px, 20px) rotate(-1deg);
+	}
+	60% {
+		transform: translate(-30px, 10px) rotate(0deg);
+	}
+	70% {
+		transform: translate(30px, 10px) rotate(-1deg);
+	}
+	80% {
+		transform: translate(-10px, -10px) rotate(1deg);
+	}
+	90% {
+		transform: translate(10px, 20px) rotate(0deg);
+	}
+	100% {
+		transform: translate(10px, -20px) rotate(-1deg);
+	}
+}
+
+@keyframes flicker {
+	0% {}
+	50% {
+		background: #ffffff;
+		filter: contrast(0) brightness(10);
+	}
+}
+
+@keyframes hue-shift {
+	0% {
+		filter: hue-rotate(0deg);
+	}
+	100% {
+		filter: hue-rotate(360deg);
+	}
+}
+
+.shake {
+	animation: shake 100ms infinite;
+}
+
+.flicker {
+	animation: flicker 100ms step-start infinite;
+}
